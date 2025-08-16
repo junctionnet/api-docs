@@ -1,4 +1,4 @@
-`include "root" {
+include "root" {
   path = find_in_parent_folders()
 }
 
@@ -8,7 +8,11 @@ locals {
 }
 
 terraform {
-  source = "../../../../modules//frontend"
+  source = "git::https://github.com/birkoff/terraform-aws-cloudfront-s3-website-fe.git//"
+  extra_arguments "retry_lock" {
+    commands  = get_terraform_commands_that_need_locking()
+    arguments = ["-lock-timeout=60m"]
+  }
 }
 
 inputs = {
