@@ -1,166 +1,498 @@
-openapi: "3.0.4"
+openapi: 3.0.1
 info:
+  title: Documents API
+  description: API endpoints for managing documents in the JunctionNet platform
   version: 1.0.0
-  title: Swagger Petstore
-  description: A sample API that uses a petstore as an example to demonstrate features in the OpenAPI 3.0 specification
-  termsOfService: http://swagger.io/terms/
-  contact:
-    name: Swagger API Team
-    email: apiteam@swagger.io
-    url: http://swagger.io
-  license:
-    name: Apache 2.0
-    url: https://www.apache.org/licenses/LICENSE-2.0.html
 servers:
-  - url: http://petstore.swagger.io/api
+  - url: https://udm.api.junctionnet.dev
+    description: Development server
 security:
-  - Petstore: []
-paths:
-  /pets:
-    get:
-      description: |
-        Returns all pets from the system that the user has access to
-        Nam sed condimentum est. Maecenas tempor sagittis sapien, nec rhoncus sem sagittis sit amet. Aenean at gravida augue, ac iaculis sem. Curabitur odio lorem, ornare eget elementum nec, cursus id lectus. Duis mi turpis, pulvinar ac eros ac, tincidunt varius justo. In hac habitasse platea dictumst. Integer at adipiscing ante, a sagittis ligula. Aenean pharetra tempor ante molestie imperdiet. Vivamus id aliquam diam. Cras quis velit non tortor eleifend sagittis. Praesent at enim pharetra urna volutpat venenatis eget eget mauris. In eleifend fermentum facilisis. Praesent enim enim, gravida ac sodales sed, placerat id erat. Suspendisse lacus dolor, consectetur non augue vel, vehicula interdum libero. Morbi euismod sagittis libero sed lacinia.
-
-        Sed tempus felis lobortis leo pulvinar rutrum. Nam mattis velit nisl, eu condimentum ligula luctus nec. Phasellus semper velit eget aliquet faucibus. In a mattis elit. Phasellus vel urna viverra, condimentum lorem id, rhoncus nibh. Ut pellentesque posuere elementum. Sed a varius odio. Morbi rhoncus ligula libero, vel eleifend nunc tristique vitae. Fusce et sem dui. Aenean nec scelerisque tortor. Fusce malesuada accumsan magna vel tempus. Quisque mollis felis eu dolor tristique, sit amet auctor felis gravida. Sed libero lorem, molestie sed nisl in, accumsan tempor nisi. Fusce sollicitudin massa ut lacinia mattis. Sed vel eleifend lorem. Pellentesque vitae felis pretium, pulvinar elit eu, euismod sapien.
-      operationId: findPets
-      parameters:
-        - name: tags
-          in: query
-          description: tags to filter by
-          required: false
-          style: form
-          schema:
-            type: array
-            items:
-              type: string
-        - name: limit
-          in: query
-          description: maximum number of results to return
-          required: false
-          schema:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    Document:
+      type: object
+      properties:
+        document_id:
+          type: string
+        document_name:
+          type: string
+        document_type:
+          type: string
+        organization:
+          type: string
+    DocumentUpdate:
+      type: object
+      properties:
+        document_id:
+          type: string
+        field_to_update:
+          type: string
+    ReferenceData:
+      type: object
+      properties:
+        document_id:
+          type: string
+        reference_attributes:
+          type: object
+    CompanyAttachment:
+      type: object
+      properties:
+        document_id:
+          type: string
+        company_type:
+          type: string
+          enum: [seller, buyer, customer]
+        company_id:
+          type: string
+    DocumentSplit:
+      type: object
+      properties:
+        document_id:
+          type: string
+        document:
+          type: string
+        total_pages:
+          type: integer
+        invoice:
+          type: array
+          items:
             type: integer
-            format: int32
+        mill_certificate:
+          type: array
+          items:
+            type: integer
+    PresignedURLRequest:
+      type: object
+      properties:
+        file_names:
+          type: array
+          items:
+            type: string
+    DocumentProcess:
+      type: object
+      properties:
+        s3_path:
+          type: string
+        batch_id:
+          type: string
+        document_type:
+          type: string
+          enum: [invoice, pl, mill]
+    BatchProcess:
+      type: object
+      properties:
+        s3_paths:
+          type: array
+          items:
+            type: string
+        batch_id:
+          type: string
+        document_type:
+          type: string
+          enum: [invoice, pl, mill]
+    ReprocessRequest:
+      type: object
+      properties:
+        invoice_id:
+          type: string
+        total_pages:
+          type: integer
+tags:
+  - name: Upload Documents
+    description: Endpoints for generating presigned URLs for document uploads
+  - name: Process Documents
+    description: Endpoints for processing uploaded documents
+  - name: Document Operations
+    description: Endpoints for managing and retrieving documents
+paths:
+  /api/upload/generate_presigned_url:
+    get:
+      tags: [Upload Documents]
+      summary: Generate presigned URL
+      description: Generates a presigned URL for uploading a single file to S3
+      parameters:
+        - name: file_name
+          in: query
+          description: Name of the file to upload (required)
+          required: true
+          schema:
+            type: string
+        - name: batch_id
+          in: query
+          description: Batch ID to associate with the file
+          schema:
+            type: string
       responses:
         '200':
-          description: pet response
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Pet'
-        default:
-          description: unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+          description: Presigned URL generated successfully
+  /api/upload/generate_bulk_presigned_urls:
     post:
-      description: Creates a new pet in the store.  Duplicates are allowed
-      operationId: addPet
+      tags: [Upload Documents]
+      summary: Generate bulk presigned URLs
+      description: Generates presigned URLs for multiple files at once
       requestBody:
-        description: Pet to add to the store
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/NewPet'
+              $ref: '#/components/schemas/PresignedURLRequest'
       responses:
         '200':
-          description: pet response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Pet'
-        default:
-          description: unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-  /pets/{id}:
+          description: Bulk presigned URLs generated successfully
+  /api/upload/document:
+    post:
+      tags: [Process Documents]
+      summary: Process uploaded document
+      description: Processes a single uploaded document for an organization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentProcess'
+      responses:
+        '200':
+          description: Document processed successfully
+  /api/upload/zip-batch:
+    post:
+      tags: [Process Documents]
+      summary: Upload and process ZIP batch documents
+      description: Processes a batch of documents from a ZIP file with document splitting capabilities
+      parameters:
+        - name: batch_id
+          in: query
+          description: Batch ID for the documents
+          schema:
+            type: string
+        - name: mock
+          in: query
+          description: Mock mode flag
+          schema:
+            type: string
+        - name: filename
+          in: query
+          description: Comma-separated list of files to process
+          schema:
+            type: string
+        - name: total_pages
+          in: query
+          description: Comma-separated list of total pages for each document (required)
+          schema:
+            type: string
+        - name: ci_start
+          in: query
+          description: Comma-separated list of Commercial Invoice start pages (0-indexed)
+          schema:
+            type: string
+        - name: ci_end
+          in: query
+          description: Comma-separated list of Commercial Invoice end pages
+          schema:
+            type: string
+        - name: mill_start
+          in: query
+          description: Comma-separated list of Mill Certificate start pages
+          schema:
+            type: string
+        - name: mill_end
+          in: query
+          description: Comma-separated list of Mill Certificate end pages
+          schema:
+            type: string
+        - name: pl_start
+          in: query
+          description: Comma-separated list of Packing List start pages
+          schema:
+            type: string
+        - name: pl_end
+          in: query
+          description: Comma-separated list of Packing List end pages
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: ZIP batch processed successfully
+  /api/upload/batch:
+    post:
+      tags: [Process Documents]
+      summary: Upload and process batch documents
+      description: Processes multiple uploaded documents as a batch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchProcess'
+      responses:
+        '200':
+          description: Batch documents processed successfully
+  /api/document/split:
+    post:
+      tags: [Process Documents]
+      summary: Split single document
+      description: Splits a document into multiple parts based on document type ranges
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentSplit'
+      responses:
+        '200':
+          description: Document split successfully
+  /api/documents:
     get:
-      description: Returns a user based on a single ID, if the user does not have access to the pet
-      operationId: find pet by id
+      tags: [Document Operations]
+      summary: List documents
+      description: Retrieves a paginated list of documents with optional filtering
       parameters:
-        - name: id
-          in: path
-          description: ID of pet to fetch
-          required: true
+        - name: batch_id
+          in: query
+          description: Filter by batch ID
+          schema:
+            type: string
+        - name: documents_ids
+          in: query
+          description: Comma-separated list of document IDs
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Page number (default: 1)
           schema:
             type: integer
-            format: int64
+            default: 1
+        - name: limit
+          in: query
+          description: Items per page (default: 20)
+          schema:
+            type: integer
+            default: 20
+        - name: start_date
+          in: query
+          description: ISO format date for range filtering
+          schema:
+            type: string
+        - name: end_date
+          in: query
+          description: ISO format date for range filtering
+          schema:
+            type: string
+        - name: date_type
+          in: query
+          description: Type of date to filter by
+          schema:
+            type: string
       responses:
         '200':
-          description: pet response
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Pet'
-        default:
-          description: unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-    delete:
-      description: deletes a single pet based on the ID supplied
-      operationId: deletePet
+          description: Documents retrieved successfully
+  /api/document:
+    get:
+      tags: [Document Operations]
+      summary: Get document
+      description: Retrieves a single document by ID or path
       parameters:
-        - name: id
-          in: path
-          description: ID of pet to delete
+        - name: document_id
+          in: query
+          description: Document UUID
+          schema:
+            type: string
+        - name: document
+          in: query
+          description: Document path (alternative to document_id)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Document retrieved successfully
+    put:
+      tags: [Document Operations]
+      summary: Update document
+      description: Updates an existing document
+      parameters:
+        - name: document_id
+          in: query
+          description: Document UUID (can also be in body)
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentUpdate'
+      responses:
+        '200':
+          description: Document updated successfully
+    delete:
+      tags: [Document Operations]
+      summary: Delete document
+      description: Soft deletes a document
+      parameters:
+        - name: document_id
+          in: query
+          description: Document UUID (required)
           required: true
           schema:
-            type: integer
-            format: int64
+            type: string
       responses:
         '204':
-          description: pet deleted
-        default:
-          description: unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-components:
-  schemas:
-    Pet:
-      allOf:
-        - $ref: '#/components/schemas/NewPet'
-        - required:
-          - id
-          properties:
-            id:
-              type: integer
-              format: int64
-
-    NewPet:
-      required:
-        - name
-      properties:
-        name:
-          type: string
-        tag:
-          type: string
-
-    Error:
-      required:
-        - code
-        - message
-      properties:
-        code:
-          type: integer
-          format: int32
-        message:
-          type: string
-  securitySchemes:
-    Petstore:
-      type: oauth2
-      flows:
-        implicit:
-          authorizationUrl: https://example.com/api/oauth/dialog
-          scopes:
-            write:pets: modify pets in your account
-            read:pets: read your pets
+          description: Document deleted successfully
+  /api/document/details:
+    get:
+      tags: [Document Operations]
+      summary: Get document details
+      description: Retrieves detailed information about a document
+      parameters:
+        - name: document_id
+          in: query
+          description: Document UUID (required)
+          required: true
+          schema:
+            type: string
+        - name: invoice
+          in: query
+          description: Include invoice data (default: true)
+          schema:
+            type: boolean
+            default: true
+        - name: line_items
+          in: query
+          description: Include line items (default: true)
+          schema:
+            type: boolean
+            default: true
+        - name: reference
+          in: query
+          description: Include reference data (default: true)
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Document details retrieved successfully
+  /api/document/metadata:
+    get:
+      tags: [Document Operations]
+      summary: Get document metadata
+      description: Retrieves metadata for a specific document
+      parameters:
+        - name: document_id
+          in: query
+          description: Document UUID (required)
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Document metadata retrieved successfully
+  /api/document/export:
+    get:
+      tags: [Document Operations]
+      summary: Export mill certificate
+      description: Retrieves detailed information about a document
+      parameters:
+        - name: document_id
+          in: query
+          description: Document UUID (required)
+          required: true
+          schema:
+            type: string
+        - name: document_type
+          in: query
+          description: Include invoice data (default: true)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Mill certificate exported successfully
+  /api/document/download:
+    get:
+      tags: [Document Operations]
+      summary: Download document
+      description: Generates a pre-signed URL for downloading a document
+      parameters:
+        - name: document
+          in: query
+          description: Document path (required)
+          required: true
+          schema:
+            type: string
+        - name: doc_type
+          in: query
+          description: Type of document
+          schema:
+            type: string
+        - name: expiration
+          in: query
+          description: URL expiration time in seconds (default: 3600)
+          schema:
+            type: integer
+            default: 3600
+      responses:
+        '200':
+          description: Download URL generated successfully
+  /api/document/reference_data:
+    put:
+      tags: [Document Operations]
+      summary: Update reference data
+      description: Updates the reference attributes of a document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReferenceData'
+      responses:
+        '200':
+          description: Reference data updated successfully
+  /api/document/company:
+    put:
+      tags: [Document Operations]
+      summary: Attach company
+      description: Associates a company with a document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyAttachment'
+      responses:
+        '200':
+          description: Company attached successfully
+  /api/document/reprocess:
+    post:
+      tags: [Document Operations]
+      summary: Reprocess document
+      description: Triggers reprocessing of an invoice document from scratch
+      parameters:
+        - name: invoice_id
+          in: query
+          description: Invoice UUID (required)
+          required: true
+          schema:
+            type: string
+        - name: total_pages
+          in: query
+          description: Total number of pages in the document (required)
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Document reprocessing initiated

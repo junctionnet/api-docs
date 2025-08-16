@@ -15,5 +15,18 @@
     <script src="./swagger-ui-bundle.js" charset="UTF-8"> </script>
     <script src="./swagger-ui-standalone-preset.js" charset="UTF-8"> </script>
     <script src="./swagger-initializer.js" charset="UTF-8"> </script>
+    <script>
+    window.onload = function() {
+      SwaggerUIBundle({
+        url: "./my-api-spec.json",  // Load your local JSON file
+        dom_id: '#swagger-ui',
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIStandalonePreset
+        ],
+        layout: "StandaloneLayout"
+      });
+    }
+  </script>
   </body>
 </html>

@@ -1,707 +1,498 @@
-# As found on https://petstore.swagger.io, August 2018
----
-swagger: '2.0'
+openapi: 3.0.1
 info:
-  description: 'This is a sample server Petstore server.  You can find out more about
-    Swagger at [http://swagger.io](http://swagger.io) or on [irc.freenode.net, #swagger](http://swagger.io/irc/).  For
-    this sample, you can use the api key `special-key` to test the authorization filters.'
+  title: Documents API
+  description: API endpoints for managing documents in the JunctionNet platform
   version: 1.0.0
-  title: Swagger Petstore
-  termsOfService: http://swagger.io/terms/
-  contact:
-    email: apiteam@swagger.io
-  license:
-    name: Apache 2.0
-    url: http://www.apache.org/licenses/LICENSE-2.0.html
-host: petstore.swagger.io
-basePath: "/v2"
+servers:
+  - url: https://udm.api.junctionnet.dev
+    description: Development server
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+  schemas:
+    Document:
+      type: object
+      properties:
+        document_id:
+          type: string
+        document_name:
+          type: string
+        document_type:
+          type: string
+        organization:
+          type: string
+    DocumentUpdate:
+      type: object
+      properties:
+        document_id:
+          type: string
+        field_to_update:
+          type: string
+    ReferenceData:
+      type: object
+      properties:
+        document_id:
+          type: string
+        reference_attributes:
+          type: object
+    CompanyAttachment:
+      type: object
+      properties:
+        document_id:
+          type: string
+        company_type:
+          type: string
+          enum: [seller, buyer, customer]
+        company_id:
+          type: string
+    DocumentSplit:
+      type: object
+      properties:
+        document_id:
+          type: string
+        document:
+          type: string
+        total_pages:
+          type: integer
+        invoice:
+          type: array
+          items:
+            type: integer
+        mill_certificate:
+          type: array
+          items:
+            type: integer
+    PresignedURLRequest:
+      type: object
+      properties:
+        file_names:
+          type: array
+          items:
+            type: string
+    DocumentProcess:
+      type: object
+      properties:
+        s3_path:
+          type: string
+        batch_id:
+          type: string
+        document_type:
+          type: string
+          enum: [invoice, pl, mill]
+    BatchProcess:
+      type: object
+      properties:
+        s3_paths:
+          type: array
+          items:
+            type: string
+        batch_id:
+          type: string
+        document_type:
+          type: string
+          enum: [invoice, pl, mill]
+    ReprocessRequest:
+      type: object
+      properties:
+        invoice_id:
+          type: string
+        total_pages:
+          type: integer
 tags:
-- name: pet
-  description: Everything about your Pets
-  externalDocs:
-    description: Find out more
-    url: http://swagger.io
-- name: store
-  description: Access to Petstore orders
-- name: user
-  description: Operations about user
-  externalDocs:
-    description: Find out more about our store
-    url: http://swagger.io
-schemes:
-- https
-- http
+  - name: Upload Documents
+    description: Endpoints for generating presigned URLs for document uploads
+  - name: Process Documents
+    description: Endpoints for processing uploaded documents
+  - name: Document Operations
+    description: Endpoints for managing and retrieving documents
 paths:
-  "/pet":
-    post:
-      tags:
-      - pet
-      summary: Add a new pet to the store
-      description: ''
-      operationId: addPet
-      consumes:
-      - application/json
-      - application/xml
-      produces:
-      - application/xml
-      - application/json
-      parameters:
-      - in: body
-        name: body
-        description: Pet object that needs to be added to the store
-        required: true
-        schema:
-          "$ref": "#/definitions/Pet"
-      responses:
-        '405':
-          description: Invalid input
-      security:
-      - petstore_auth:
-        - write:pets
-        - read:pets
-    put:
-      tags:
-      - pet
-      summary: Update an existing pet
-      description: ''
-      operationId: updatePet
-      consumes:
-      - application/json
-      - application/xml
-      produces:
-      - application/xml
-      - application/json
-      parameters:
-      - in: body
-        name: body
-        description: Pet object that needs to be added to the store
-        required: true
-        schema:
-          "$ref": "#/definitions/Pet"
-      responses:
-        '400':
-          description: Invalid ID supplied
-        '404':
-          description: Pet not found
-        '405':
-          description: Validation exception
-      security:
-      - petstore_auth:
-        - write:pets
-        - read:pets
-  "/pet/findByStatus":
+  /api/upload/generate_presigned_url:
     get:
-      tags:
-      - pet
-      summary: Finds Pets by status
-      description: Multiple status values can be provided with comma separated strings
-      operationId: findPetsByStatus
-      produces:
-      - application/xml
-      - application/json
+      tags: [Upload Documents]
+      summary: Generate presigned URL
+      description: Generates a presigned URL for uploading a single file to S3
       parameters:
-      - name: status
-        in: query
-        description: Status values that need to be considered for filter
-        required: true
-        type: array
-        items:
-          type: string
-          enum:
-          - available
-          - pending
-          - sold
-          default: available
-        collectionFormat: multi
-      responses:
-        '200':
-          description: successful operation
-          schema:
-            type: array
-            items:
-              "$ref": "#/definitions/Pet"
-        '400':
-          description: Invalid status value
-      security:
-      - petstore_auth:
-        - write:pets
-        - read:pets
-  "/pet/findByTags":
-    get:
-      tags:
-      - pet
-      summary: Finds Pets by tags
-      description: Muliple tags can be provided with comma separated strings. Use
-        tag1, tag2, tag3 for testing.
-      operationId: findPetsByTags
-      produces:
-      - application/xml
-      - application/json
-      parameters:
-      - name: tags
-        in: query
-        description: Tags to filter by
-        required: true
-        type: array
-        items:
-          type: string
-        collectionFormat: multi
-      responses:
-        '200':
-          description: successful operation
-          schema:
-            type: array
-            items:
-              "$ref": "#/definitions/Pet"
-        '400':
-          description: Invalid tag value
-      security:
-      - petstore_auth:
-        - write:pets
-        - read:pets
-      deprecated: true
-  "/pet/{petId}":
-    get:
-      tags:
-      - pet
-      summary: Find pet by ID
-      description: Returns a single pet
-      operationId: getPetById
-      produces:
-      - application/xml
-      - application/json
-      parameters:
-      - name: petId
-        in: path
-        description: ID of pet to return
-        required: true
-        type: integer
-        format: int64
-      responses:
-        '200':
-          description: successful operation
-          schema:
-            "$ref": "#/definitions/Pet"
-        '400':
-          description: Invalid ID supplied
-        '404':
-          description: Pet not found
-      security:
-      - api_key: []
-    post:
-      tags:
-      - pet
-      summary: Updates a pet in the store with form data
-      description: ''
-      operationId: updatePetWithForm
-      consumes:
-      - application/x-www-form-urlencoded
-      produces:
-      - application/xml
-      - application/json
-      parameters:
-      - name: petId
-        in: path
-        description: ID of pet that needs to be updated
-        required: true
-        type: integer
-        format: int64
-      - name: name
-        in: formData
-        description: Updated name of the pet
-        required: false
-        type: string
-      - name: status
-        in: formData
-        description: Updated status of the pet
-        required: false
-        type: string
-      responses:
-        '405':
-          description: Invalid input
-      security:
-      - petstore_auth:
-        - write:pets
-        - read:pets
-    delete:
-      tags:
-      - pet
-      summary: Deletes a pet
-      description: ''
-      operationId: deletePet
-      produces:
-      - application/xml
-      - application/json
-      parameters:
-      - name: api_key
-        in: header
-        required: false
-        type: string
-      - name: petId
-        in: path
-        description: Pet id to delete
-        required: true
-        type: integer
-        format: int64
-      responses:
-        '400':
-          description: Invalid ID supplied
-        '404':
-          description: Pet not found
-      security:
-      - petstore_auth:
-        - write:pets
-        - read:pets
-  "/pet/{petId}/uploadImage":
-    post:
-      tags:
-      - pet
-      summary: uploads an image
-      description: ''
-      operationId: uploadFile
-      consumes:
-      - multipart/form-data
-      produces:
-      - application/json
-      parameters:
-      - name: petId
-        in: path
-        description: ID of pet to update
-        required: true
-        type: integer
-        format: int64
-      - name: additionalMetadata
-        in: formData
-        description: Additional data to pass to server
-        required: false
-        type: string
-      - name: file
-        in: formData
-        description: file to upload
-        required: false
-        type: file
-      responses:
-        '200':
-          description: successful operation
-          schema:
-            "$ref": "#/definitions/ApiResponse"
-      security:
-      - petstore_auth:
-        - write:pets
-        - read:pets
-  "/store/inventory":
-    get:
-      tags:
-      - store
-      summary: Returns pet inventories by status
-      description: Returns a map of status codes to quantities
-      operationId: getInventory
-      produces:
-      - application/json
-      parameters: []
-      responses:
-        '200':
-          description: successful operation
-          schema:
-            type: object
-            additionalProperties:
-              type: integer
-              format: int32
-      security:
-      - api_key: []
-  "/store/order":
-    post:
-      tags:
-      - store
-      summary: Place an order for a pet
-      description: ''
-      operationId: placeOrder
-      produces:
-      - application/xml
-      - application/json
-      parameters:
-      - in: body
-        name: body
-        description: order placed for purchasing the pet
-        required: true
-        schema:
-          "$ref": "#/definitions/Order"
-      responses:
-        '200':
-          description: successful operation
-          schema:
-            "$ref": "#/definitions/Order"
-        '400':
-          description: Invalid Order
-  "/store/order/{orderId}":
-    get:
-      tags:
-      - store
-      summary: Find purchase order by ID
-      description: For valid response try integer IDs with value >= 1 and <= 10. Other
-        values will generated exceptions
-      operationId: getOrderById
-      produces:
-      - application/xml
-      - application/json
-      parameters:
-      - name: orderId
-        in: path
-        description: ID of pet that needs to be fetched
-        required: true
-        type: integer
-        maximum: 10
-        minimum: 1
-        format: int64
-      responses:
-        '200':
-          description: successful operation
-          schema:
-            "$ref": "#/definitions/Order"
-        '400':
-          description: Invalid ID supplied
-        '404':
-          description: Order not found
-    delete:
-      tags:
-      - store
-      summary: Delete purchase order by ID
-      description: For valid response try integer IDs with positive integer value.
-        Negative or non-integer values will generate API errors
-      operationId: deleteOrder
-      produces:
-      - application/xml
-      - application/json
-      parameters:
-      - name: orderId
-        in: path
-        description: ID of the order that needs to be deleted
-        required: true
-        type: integer
-        minimum: 1
-        format: int64
-      responses:
-        '400':
-          description: Invalid ID supplied
-        '404':
-          description: Order not found
-  "/user":
-    post:
-      tags:
-      - user
-      summary: Create user
-      description: This can only be done by the logged in user.
-      operationId: createUser
-      produces:
-      - application/xml
-      - application/json
-      parameters:
-      - in: body
-        name: body
-        description: Created user object
-        required: true
-        schema:
-          "$ref": "#/definitions/User"
-      responses:
-        default:
-          description: successful operation
-  "/user/createWithArray":
-    post:
-      tags:
-      - user
-      summary: Creates list of users with given input array
-      description: ''
-      operationId: createUsersWithArrayInput
-      produces:
-      - application/xml
-      - application/json
-      parameters:
-      - in: body
-        name: body
-        description: List of user object
-        required: true
-        schema:
-          type: array
-          items:
-            "$ref": "#/definitions/User"
-      responses:
-        default:
-          description: successful operation
-  "/user/createWithList":
-    post:
-      tags:
-      - user
-      summary: Creates list of users with given input array
-      description: ''
-      operationId: createUsersWithListInput
-      produces:
-      - application/xml
-      - application/json
-      parameters:
-      - in: body
-        name: body
-        description: List of user object
-        required: true
-        schema:
-          type: array
-          items:
-            "$ref": "#/definitions/User"
-      responses:
-        default:
-          description: successful operation
-  "/user/login":
-    get:
-      tags:
-      - user
-      summary: Logs user into the system
-      description: ''
-      operationId: loginUser
-      produces:
-      - application/xml
-      - application/json
-      parameters:
-      - name: username
-        in: query
-        description: The user name for login
-        required: true
-        type: string
-      - name: password
-        in: query
-        description: The password for login in clear text
-        required: true
-        type: string
-      responses:
-        '200':
-          description: successful operation
+        - name: file_name
+          in: query
+          description: Name of the file to upload (required)
+          required: true
           schema:
             type: string
-          headers:
-            X-Rate-Limit:
-              type: integer
-              format: int32
-              description: calls per hour allowed by the user
-            X-Expires-After:
-              type: string
-              format: date-time
-              description: date in UTC when token expires
-        '400':
-          description: Invalid username/password supplied
-  "/user/logout":
-    get:
-      tags:
-      - user
-      summary: Logs out current logged in user session
-      description: ''
-      operationId: logoutUser
-      produces:
-      - application/xml
-      - application/json
-      parameters: []
-      responses:
-        default:
-          description: successful operation
-  "/user/{username}":
-    get:
-      tags:
-      - user
-      summary: Get user by user name
-      description: ''
-      operationId: getUserByName
-      produces:
-      - application/xml
-      - application/json
-      parameters:
-      - name: username
-        in: path
-        description: 'The name that needs to be fetched. Use user1 for testing. '
-        required: true
-        type: string
+        - name: batch_id
+          in: query
+          description: Batch ID to associate with the file
+          schema:
+            type: string
       responses:
         '200':
-          description: successful operation
+          description: Presigned URL generated successfully
+  /api/upload/generate_bulk_presigned_urls:
+    post:
+      tags: [Upload Documents]
+      summary: Generate bulk presigned URLs
+      description: Generates presigned URLs for multiple files at once
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PresignedURLRequest'
+      responses:
+        '200':
+          description: Bulk presigned URLs generated successfully
+  /api/upload/document:
+    post:
+      tags: [Process Documents]
+      summary: Process uploaded document
+      description: Processes a single uploaded document for an organization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentProcess'
+      responses:
+        '200':
+          description: Document processed successfully
+  /api/upload/zip-batch:
+    post:
+      tags: [Process Documents]
+      summary: Upload and process ZIP batch documents
+      description: Processes a batch of documents from a ZIP file with document splitting capabilities
+      parameters:
+        - name: batch_id
+          in: query
+          description: Batch ID for the documents
           schema:
-            "$ref": "#/definitions/User"
-        '400':
-          description: Invalid username supplied
-        '404':
-          description: User not found
+            type: string
+        - name: mock
+          in: query
+          description: Mock mode flag
+          schema:
+            type: string
+        - name: filename
+          in: query
+          description: Comma-separated list of files to process
+          schema:
+            type: string
+        - name: total_pages
+          in: query
+          description: Comma-separated list of total pages for each document (required)
+          schema:
+            type: string
+        - name: ci_start
+          in: query
+          description: Comma-separated list of Commercial Invoice start pages (0-indexed)
+          schema:
+            type: string
+        - name: ci_end
+          in: query
+          description: Comma-separated list of Commercial Invoice end pages
+          schema:
+            type: string
+        - name: mill_start
+          in: query
+          description: Comma-separated list of Mill Certificate start pages
+          schema:
+            type: string
+        - name: mill_end
+          in: query
+          description: Comma-separated list of Mill Certificate end pages
+          schema:
+            type: string
+        - name: pl_start
+          in: query
+          description: Comma-separated list of Packing List start pages
+          schema:
+            type: string
+        - name: pl_end
+          in: query
+          description: Comma-separated list of Packing List end pages
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: ZIP batch processed successfully
+  /api/upload/batch:
+    post:
+      tags: [Process Documents]
+      summary: Upload and process batch documents
+      description: Processes multiple uploaded documents as a batch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchProcess'
+      responses:
+        '200':
+          description: Batch documents processed successfully
+  /api/document/split:
+    post:
+      tags: [Process Documents]
+      summary: Split single document
+      description: Splits a document into multiple parts based on document type ranges
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentSplit'
+      responses:
+        '200':
+          description: Document split successfully
+  /api/documents:
+    get:
+      tags: [Document Operations]
+      summary: List documents
+      description: Retrieves a paginated list of documents with optional filtering
+      parameters:
+        - name: batch_id
+          in: query
+          description: Filter by batch ID
+          schema:
+            type: string
+        - name: documents_ids
+          in: query
+          description: Comma-separated list of document IDs
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Page number (default: 1)
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Items per page (default: 20)
+          schema:
+            type: integer
+            default: 20
+        - name: start_date
+          in: query
+          description: ISO format date for range filtering
+          schema:
+            type: string
+        - name: end_date
+          in: query
+          description: ISO format date for range filtering
+          schema:
+            type: string
+        - name: date_type
+          in: query
+          description: Type of date to filter by
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Documents retrieved successfully
+  /api/document:
+    get:
+      tags: [Document Operations]
+      summary: Get document
+      description: Retrieves a single document by ID or path
+      parameters:
+        - name: document_id
+          in: query
+          description: Document UUID
+          schema:
+            type: string
+        - name: document
+          in: query
+          description: Document path (alternative to document_id)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Document retrieved successfully
     put:
-      tags:
-      - user
-      summary: Updated user
-      description: This can only be done by the logged in user.
-      operationId: updateUser
-      produces:
-      - application/xml
-      - application/json
+      tags: [Document Operations]
+      summary: Update document
+      description: Updates an existing document
       parameters:
-      - name: username
-        in: path
-        description: name that need to be updated
+        - name: document_id
+          in: query
+          description: Document UUID (can also be in body)
+          schema:
+            type: string
+      requestBody:
         required: true
-        type: string
-      - in: body
-        name: body
-        description: Updated user object
-        required: true
-        schema:
-          "$ref": "#/definitions/User"
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentUpdate'
       responses:
-        '400':
-          description: Invalid user supplied
-        '404':
-          description: User not found
+        '200':
+          description: Document updated successfully
     delete:
-      tags:
-      - user
-      summary: Delete user
-      description: This can only be done by the logged in user.
-      operationId: deleteUser
-      produces:
-      - application/xml
-      - application/json
+      tags: [Document Operations]
+      summary: Delete document
+      description: Soft deletes a document
       parameters:
-      - name: username
-        in: path
-        description: The name that needs to be deleted
-        required: true
-        type: string
+        - name: document_id
+          in: query
+          description: Document UUID (required)
+          required: true
+          schema:
+            type: string
       responses:
-        '400':
-          description: Invalid username supplied
-        '404':
-          description: User not found
-securityDefinitions:
-  petstore_auth:
-    type: oauth2
-    authorizationUrl: https://petstore.swagger.io/oauth/dialog
-    flow: implicit
-    scopes:
-      write:pets: modify pets in your account
-      read:pets: read your pets
-  api_key:
-    type: apiKey
-    name: api_key
-    in: header
-definitions:
-  Order:
-    type: object
-    properties:
-      id:
-        type: integer
-        format: int64
-      petId:
-        type: integer
-        format: int64
-      quantity:
-        type: integer
-        format: int32
-      shipDate:
-        type: string
-        format: date-time
-      status:
-        type: string
-        description: Order Status
-        enum:
-        - placed
-        - approved
-        - delivered
-      complete:
-        type: boolean
-        default: false
-    xml:
-      name: Order
-  User:
-    type: object
-    properties:
-      id:
-        type: integer
-        format: int64
-      username:
-        type: string
-      firstName:
-        type: string
-      lastName:
-        type: string
-      email:
-        type: string
-      password:
-        type: string
-      phone:
-        type: string
-      userStatus:
-        type: integer
-        format: int32
-        description: User Status
-    xml:
-      name: User
-  Category:
-    type: object
-    properties:
-      id:
-        type: integer
-        format: int64
-      name:
-        type: string
-    xml:
-      name: Category
-  Tag:
-    type: object
-    properties:
-      id:
-        type: integer
-        format: int64
-      name:
-        type: string
-    xml:
-      name: Tag
-  Pet:
-    type: object
-    required:
-    - name
-    - photoUrls
-    properties:
-      id:
-        type: integer
-        format: int64
-      category:
-        "$ref": "#/definitions/Category"
-      name:
-        type: string
-        example: doggie
-      photoUrls:
-        type: array
-        xml:
-          name: photoUrl
-          wrapped: true
-        items:
-          type: string
-      tags:
-        type: array
-        xml:
-          name: tag
-          wrapped: true
-        items:
-          "$ref": "#/definitions/Tag"
-      status:
-        type: string
-        description: pet status in the store
-        enum:
-        - available
-        - pending
-        - sold
-    xml:
-      name: Pet
-  ApiResponse:
-    type: object
-    properties:
-      code:
-        type: integer
-        format: int32
-      type:
-        type: string
-      message:
-        type: string
-externalDocs:
-  description: Find out more about Swagger
-  url: http://swagger.io
+        '204':
+          description: Document deleted successfully
+  /api/document/details:
+    get:
+      tags: [Document Operations]
+      summary: Get document details
+      description: Retrieves detailed information about a document
+      parameters:
+        - name: document_id
+          in: query
+          description: Document UUID (required)
+          required: true
+          schema:
+            type: string
+        - name: invoice
+          in: query
+          description: Include invoice data (default: true)
+          schema:
+            type: boolean
+            default: true
+        - name: line_items
+          in: query
+          description: Include line items (default: true)
+          schema:
+            type: boolean
+            default: true
+        - name: reference
+          in: query
+          description: Include reference data (default: true)
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Document details retrieved successfully
+  /api/document/metadata:
+    get:
+      tags: [Document Operations]
+      summary: Get document metadata
+      description: Retrieves metadata for a specific document
+      parameters:
+        - name: document_id
+          in: query
+          description: Document UUID (required)
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Document metadata retrieved successfully
+  /api/document/export:
+    get:
+      tags: [Document Operations]
+      summary: Export mill certificate
+      description: Retrieves detailed information about a document
+      parameters:
+        - name: document_id
+          in: query
+          description: Document UUID (required)
+          required: true
+          schema:
+            type: string
+        - name: document_type
+          in: query
+          description: Include invoice data (default: true)
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Mill certificate exported successfully
+  /api/document/download:
+    get:
+      tags: [Document Operations]
+      summary: Download document
+      description: Generates a pre-signed URL for downloading a document
+      parameters:
+        - name: document
+          in: query
+          description: Document path (required)
+          required: true
+          schema:
+            type: string
+        - name: doc_type
+          in: query
+          description: Type of document
+          schema:
+            type: string
+        - name: expiration
+          in: query
+          description: URL expiration time in seconds (default: 3600)
+          schema:
+            type: integer
+            default: 3600
+      responses:
+        '200':
+          description: Download URL generated successfully
+  /api/document/reference_data:
+    put:
+      tags: [Document Operations]
+      summary: Update reference data
+      description: Updates the reference attributes of a document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReferenceData'
+      responses:
+        '200':
+          description: Reference data updated successfully
+  /api/document/company:
+    put:
+      tags: [Document Operations]
+      summary: Attach company
+      description: Associates a company with a document
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyAttachment'
+      responses:
+        '200':
+          description: Company attached successfully
+  /api/document/reprocess:
+    post:
+      tags: [Document Operations]
+      summary: Reprocess document
+      description: Triggers reprocessing of an invoice document from scratch
+      parameters:
+        - name: invoice_id
+          in: query
+          description: Invoice UUID (required)
+          required: true
+          schema:
+            type: string
+        - name: total_pages
+          in: query
+          description: Total number of pages in the document (required)
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Document reprocessing initiated
